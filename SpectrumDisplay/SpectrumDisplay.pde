@@ -66,7 +66,7 @@ void drawSpectrum() {
   }
   
   int indexAtMousePos = max(0, min(SpectrumSize-1, mouseX - xstart));
-  text("At mouse: " + correctedSpectrumData[indexAtMousePos], 300, 390);
+  text("At mouse: " + correctedSpectrumData[indexAtMousePos], 350, 390);
   text("MaxValue: " + maxVal, 200, 390);
 }
 

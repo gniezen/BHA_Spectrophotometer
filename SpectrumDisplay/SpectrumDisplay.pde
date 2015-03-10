@@ -14,9 +14,11 @@ PFont titleFont;
 String buffer;
 
 int SpectrumSize = 768;
-int[] spectrumData;
+float[] rawSpectrumData, correctedSpectrumData;
+float[] darkReadout, whiteReadout;
 int spectrumValueIndex=0;
 int spectraCount=0;
+
 
 void setup() {
   size(800, 400);
@@ -31,7 +33,13 @@ void setup() {
   String portName = Serial.list()[0];
   port = new Serial(this, portName, 57600);
 
-  spectrumData = new int[SpectrumSize];
+  correctedSpectrumData = new float[SpectrumSize];
+  rawSpectrumData = new float[SpectrumSize];
+  darkReadout = new float[SpectrumSize];
+  whiteReadout = new float[SpectrumSize];
+  for(int i=0;i<SpectrumSize;i++)
+    whiteReadout[i]=1.0f;
+  
   lastSpectrumUpdate=millis();
 
   ledState=true;
@@ -46,12 +54,31 @@ void readSpectrum() {
 
 void drawSpectrum() {
   int xstart=10, ystart=height-30;
-  float yscale = 360/1024.0f * 3;
-  for (int i=1;i<spectrumData.length;i++) {
-    line(i+xstart, ystart - spectrumData[i-1] * yscale, 
-        i+xstart+1, ystart - spectrumData[i] * yscale);
+  
+  float maxVal=0.0f;
+  for (int i=0;i<correctedSpectrumData.length;i++)
+    maxVal = max(correctedSpectrumData[i],maxVal);
+    
+  float yscale = (height - 160)/maxVal;
+  for (int i=1;i<correctedSpectrumData.length;i++) {
+    line(i+xstart, ystart - correctedSpectrumData[i-1] * yscale, 
+        i+xstart+1, ystart - correctedSpectrumData[i] * yscale);
+  }
+  
+  int indexAtMousePos = max(0, min(SpectrumSize-1, mouseX - xstart));
+  text("At mouse: " + correctedSpectrumData[indexAtMousePos], 300, 390);
+  text("MaxValue: " + maxVal, 200, 390);
+}
+
+/*
+Compute correctedSpectrumData based on rawSpectrumData, whiteReadout and darkReadout
+*/
+void computeSpectrum() {
+  for (int i=0;i<SpectrumSize;i++) {
+    correctedSpectrumData[i] = (rawSpectrumData[i] - darkReadout[i]) / whiteReadout[i];
   }
 }
+
 
 
 void draw() {
@@ -64,7 +91,9 @@ void draw() {
 
   background(255);
   text("U=decrease exposure, I=increase exposure", 10, 55);
-  text("Exposure time: " + exposureTime + " ms", 10, 90);
+  text("Exposure time: " + exposureTime + " ms", 10, 75);
+  text("D=set dark measurement", 10, 100);
+  text("W=set white measurement (no sample)", 10, 115);
 
   text("Measurements: " + spectraCount, 10, 390);
 
@@ -88,8 +117,9 @@ void serialEvent(Serial port) {
       char first=buffer.charAt(0);
       if (first >= '0' && first <= '9') {
         int value = Integer.parseInt(buffer.trim());//substring(0,buffer.length()-1));
-        spectrumData[spectrumValueIndex++] = value;
+        rawSpectrumData[spectrumValueIndex++] = value/1024.0f;
         if (spectrumValueIndex==SpectrumSize) {
+          computeSpectrum();
           spectrumValueIndex=0;
           spectraCount ++;
         }
@@ -122,6 +152,16 @@ void keyPressed() {
   
   if (key == ' ') {
     readSpectrum();
+  }
+  
+  if (key == 'd') {
+    for (int i=0;i<SpectrumSize;i++)
+      darkReadout[i] = rawSpectrumData[i];
+  }
+  
+  if (key == 'w') {
+    for (int i=0;i<SpectrumSize;i++)
+      whiteReadout[i] = rawSpectrumData[i];
   }
 }
 

@@ -75,7 +75,7 @@ Compute correctedSpectrumData based on rawSpectrumData, whiteReadout and darkRea
 */
 void computeSpectrum() {
   for (int i=0;i<SpectrumSize;i++) {
-    correctedSpectrumData[i] = (rawSpectrumData[i] - darkReadout[i]) / whiteReadout[i];
+    correctedSpectrumData[i] = (rawSpectrumData[i] - darkReadout[i]) / ( whiteReadout[i] - darkReadout[i]);
   }
 }
 
